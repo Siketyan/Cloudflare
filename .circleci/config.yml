@@ -1,0 +1,54 @@
+version: 2.1
+
+executors:
+  default:
+    working_directory: ~/repo
+    docker:
+      - image: hashicorp/terraform:light
+
+jobs:
+  check:
+    executor: default
+    steps:
+      - checkout
+
+      - run:
+          name: Check Terraform file format
+          command: terraform fmt
+
+  plan:
+    executor: default
+    steps:
+      - checkout
+
+      - run:
+          name: Generate Terraform plan
+          command: terraform plan -out=terraform.plan
+
+      - persist_to_workspace:
+          root: .
+          paths:
+            - terraform.plan
+
+  apply:
+    executor: default
+    steps:
+      - attach_workspace:
+          at: .
+
+      - run:
+          name: Apply the plan
+          command: terraform apply --auto-approve terraform.plan
+
+workflows:
+  plan_and_apply:
+    jobs:
+      - plan
+#      - plan:
+#          filters:
+#            branches:
+#              only: master
+
+      - apply:
+          requires:
+            - plan
